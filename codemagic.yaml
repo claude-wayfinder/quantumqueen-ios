@@ -6,15 +6,11 @@ workflows:
     integrations:
       app_store_connect: MemoryRxAi-ASC
     environment:
-      ios_signing:
-        provisioning_profiles:
-          - QuantumQueen-AppStore-Profile
-        certificates:
-          - QuantumQueen-Distribution-Cert
       vars:
         XCODE_WORKSPACE: "src/Quantum Queen.xcworkspace"
         XCODE_SCHEME: "Quantum Queen"
         APP_STORE_APPLE_ID: "6768386321"
+        BUNDLE_ID: "org.heuremen.quantumqueen"
     scripts:
       - name: Install CocoaPods
         script: |
@@ -24,6 +20,18 @@ workflows:
         script: |
           cd src
           agvtool new-version -all $BUILD_NUMBER
+      - name: Fetch signing files via ASC API
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Initialize keychain and add certs
+        script: |
+          keychain initialize
+          keychain add-certificates
+      - name: Apply provisioning profiles to Xcode project
+        script: |
+          xcode-project use-profiles
       - name: Generate export options plist
         script: |
           cat > /tmp/export_options.plist << 'EOF'
@@ -36,12 +44,7 @@ workflows:
             <key>teamID</key>
             <string>VWS5F2ULF3</string>
             <key>signingStyle</key>
-            <string>manual</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>org.heuremen.quantumqueen</key>
-              <string>QuantumQueen AppStore</string>
-            </dict>
+            <string>automatic</string>
             <key>uploadSymbols</key>
             <true/>
             <key>compileBitcode</key>
@@ -51,7 +54,6 @@ workflows:
           EOF
       - name: Build iOS for App Store
         script: |
-          xcode-project use-profiles
           xcodebuild \
             -workspace "$XCODE_WORKSPACE" \
             -scheme "$XCODE_SCHEME" \
@@ -59,11 +61,7 @@ workflows:
             -destination "generic/platform=iOS" \
             -configuration Release \
             -archivePath /tmp/QuantumQueen.xcarchive \
-            archive \
-            DEVELOPMENT_TEAM=VWS5F2ULF3 \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="QuantumQueen AppStore"
+            archive
           mkdir -p build/ios/ipa
           xcodebuild \
             -exportArchive \
