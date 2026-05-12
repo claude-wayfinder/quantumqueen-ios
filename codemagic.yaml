@@ -6,6 +6,9 @@ workflows:
     integrations:
       app_store_connect: MemoryRxAi-ASC
     environment:
+      ios_signing:
+        certificates:
+          - QuantumQueen-Distribution-Cert
       vars:
         XCODE_WORKSPACE: "src/Quantum Queen.xcworkspace"
         XCODE_SCHEME: "Quantum Queen"
